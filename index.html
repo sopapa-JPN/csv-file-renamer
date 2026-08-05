@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>ＣＳＶファイル名変更ソフト</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #d8e1ec;
+      --text: #172033;
+      --muted: #607086;
+      --blue: #1769e0;
+      --blue-dark: #0d4ea9;
+      --green: #14865b;
+      --green-dark: #0e6646;
+      --yellow: #fff7cf;
+      --yellow-border: #e6c746;
+      --red: #b42318;
+      --red-bg: #fff1f0;
+      --shadow: 0 12px 34px rgba(25, 49, 83, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Yu Gothic UI", "Meiryo", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eef5ff 0, var(--bg) 260px);
+    }
+
+    button, input { font: inherit; }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 24px auto 44px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 24px 28px;
+      color: #fff;
+      background: linear-gradient(125deg, var(--blue-dark), var(--blue));
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 7px;
+      font-size: clamp(25px, 4vw, 40px);
+      letter-spacing: .03em;
+    }
+
+    .hero p {
+      margin: 0;
+      opacity: .92;
+      font-size: 15px;
+    }
+
+    .hero-badge {
+      flex: 0 0 auto;
+      min-width: 120px;
+      padding: 13px 18px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 999px;
+      text-align: center;
+      font-weight: 800;
+      background: rgba(255,255,255,.14);
+      backdrop-filter: blur(8px);
+    }
+
+    .notice {
+      margin: 18px 0;
+      padding: 13px 16px;
+      border: 1px solid #b7d3ff;
+      border-radius: 12px;
+      color: #174b8a;
+      background: #edf5ff;
+      line-height: 1.65;
+    }
+
+    .notice strong { color: #0d3d76; }
+
+    [hidden] { display: none !important; }
+
+    .embedded-notice {
+      border-color: #e6c746;
+      color: #684b00;
+      background: #fff9df;
+    }
+
+    .embedded-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .embedded-actions .button {
+      min-height: 42px;
+    }
+
+    .panel {
+      margin-top: 18px;
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 20px;
+      font-size: 21px;
+    }
+
+    .step {
+      display: inline-grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      color: #fff;
+      background: var(--green);
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .folder-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .folder-display {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      background: #f8fafc;
+      overflow-wrap: anywhere;
+    }
+
+    .button {
+      min-height: 48px;
+      padding: 10px 20px;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      background: var(--blue);
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .08s ease, filter .15s ease, opacity .15s ease;
+    }
+
+    .button:hover { filter: brightness(.96); }
+    .button:active { transform: translateY(1px); }
+    .button:disabled { cursor: not-allowed; opacity: .46; }
+    .button.secondary { background: #5f6f83; }
+    .button.green { background: var(--green); }
+    .button.large { min-height: 54px; padding-inline: 34px; font-size: 17px; }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: minmax(240px, 2fr) repeat(4, minmax(125px, 1fr));
+      gap: 14px;
+    }
+
+    label {
+      display: block;
+      color: #344054;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    label small {
+      display: block;
+      min-height: 34px;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      height: 46px;
+      margin-top: 7px;
+      padding: 9px 12px;
+      border: 1px solid #bfcbd9;
+      border-radius: 9px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(23,105,224,.14);
+    }
+
+    .example {
+      margin-top: 17px;
+      padding: 12px 14px;
+      border-left: 5px solid var(--green);
+      border-radius: 8px;
+      color: #325340;
+      background: #eefaf5;
+      line-height: 1.65;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 11px;
+      margin-top: 18px;
+    }
+
+    .status {
+      min-height: 46px;
+      flex: 1 1 320px;
+      display: flex;
+      align-items: center;
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      background: #f8fafc;
+      line-height: 1.5;
+    }
+
+    .status.success { color: var(--green-dark); border-color: #9ed8c1; background: #effaf5; }
+    .status.error { color: var(--red); border-color: #f0b5b1; background: var(--red-bg); }
+    .status.working { color: #744d00; border-color: #ead07a; background: #fff9df; }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .preview-head p { margin: 5px 0 0; color: var(--muted); }
+    .count { flex: 0 0 auto; font-weight: 800; color: var(--blue-dark); }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 790px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #e8edf3;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      color: #fff;
+      background: #35536f;
+      font-size: 13px;
+    }
+
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:nth-child(even) { background: #fafcff; }
+    td.number { width: 62px; text-align: center; }
+    td.source { color: #3a4759; word-break: break-all; }
+    td.edit-cell { min-width: 320px; background: var(--yellow); }
+    td.status-cell { width: 150px; font-weight: 800; }
+
+    .name-editor {
+      width: 100%;
+      min-width: 270px;
+      height: 38px !important;
+      margin: 0 !important;
+      border-color: var(--yellow-border) !important;
+      background: #fffef5 !important;
+    }
+
+    .ok-text { color: var(--green-dark); }
+    .error-text { color: var(--red); }
+    .same-text { color: #6b7280; }
+
+    .empty {
+      padding: 34px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 17px;
+    }
+
+    .help-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .help-card {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfcfe;
+      line-height: 1.65;
+    }
+
+    .help-card strong { display: block; margin-bottom: 4px; color: var(--blue-dark); }
+
+    .warning {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid #e8ce73;
+      border-radius: 12px;
+      background: #fff9df;
+      line-height: 1.7;
+    }
+
+    dialog {
+      width: min(520px, calc(100% - 32px));
+      border: 0;
+      border-radius: 16px;
+      padding: 0;
+      box-shadow: 0 24px 80px rgba(0,0,0,.25);
+    }
+
+    dialog::backdrop { background: rgba(8, 18, 34, .54); }
+    .dialog-body { padding: 25px; }
+    .dialog-body h2 { margin: 0 0 12px; }
+    .dialog-body p { color: #445166; line-height: 1.7; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+    .progress-track {
+      width: 100%;
+      height: 12px;
+      margin-top: 14px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8edf4;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #30ad7c);
+      transition: width .16s ease;
+    }
+
+    @media (max-width: 960px) {
+      .field-grid { grid-template-columns: repeat(2, 1fr); }
+      .field-grid label:first-child { grid-column: 1 / -1; }
+      .help-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .page { width: min(100% - 16px, 1180px); margin-top: 8px; }
+      .hero { padding: 20px; border-radius: 15px; }
+      .hero-badge { display: none; }
+      .panel { padding: 17px; border-radius: 14px; }
+      .folder-row, .field-grid { grid-template-columns: 1fr; }
+      .field-grid label:first-child { grid-column: auto; }
+      .button { width: 100%; }
+      .footer-actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <h1>ＣＳＶファイル名変更ソフト</h1>
+        <p>フォルダー内のCSVを、指定した間隔の連番へまとめて変更します。</p>
+      </div>
+      <div class="hero-badge">GitHub版</div>
+    </header>
+
+    <div id="browserNotice" class="notice">
+      <strong>推奨ブラウザ：Windows版 Microsoft Edge または Google Chrome</strong><br>
+      「フォルダーを選ぶ」から、デスクトップだけでなく「PC」→「Dドライブ」や外付けドライブも選択できます。
+    </div>
+
+    <div id="embeddedNotice" class="notice embedded-notice" hidden>
+      <strong>現在、埋め込み画面の中で開かれています。</strong><br>
+      ブラウザの安全制限により、この画面のままではフォルダー選択を表示できません。下のボタンで通常の別タブを開き、その画面から操作してください。
+      <div class="embedded-actions">
+        <button id="openStandaloneButton" class="button green" type="button">↗ 別タブでソフトを開く</button>
+        <span>GitHub Pages公開後は、公開URLをEdgeまたはChromeのアドレスバーから直接開いても使用できます。</span>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2 class="section-title"><span class="step">1</span>CSVが入っているフォルダーを選択</h2>
+      <div class="folder-row">
+        <div id="folderName" class="folder-display">まだフォルダーが選択されていません</div>
+        <button id="selectFolderButton" class="button" type="button">📁 フォルダーを選ぶ</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title"><span class="step">2</span>ファイル名のルールを設定</h2>
+      <div class="field-grid">
+        <label>
+          共通ファイル名
+          <small>前回の入力内容を自動保存します</small>
+          <input id="commonName" type="text" value="試験データ" maxlength="150" autocomplete="off">
+        </label>
+        <label>
+          区切り文字
+          <small>例：「_」「-」</small>
+          <input id="separator" type="text" value="_" maxlength="10" autocomplete="off">
+        </label>
+        <label>
+          開始値
+          <small>最初の数字</small>
+          <input id="startNumber" type="number" value="0" step="1">
+        </label>
+        <label>
+          増加値
+          <small>次のファイルとの差</small>
+          <input id="stepNumber" type="number" value="1000" min="1" step="1">
+        </label>
+        <label>
+          ゼロ埋め桁数
+          <small>数字部分の桁をそろえます</small>
+          <input id="digits" type="number" value="7" min="1" max="18" step="1">
+        </label>
+      </div>
+      <div class="example">
+        設定例：共通名「試験名」・開始値「0」・増加値「1000」・桁数「7」<br>
+        → 試験名_0000000.csv ／ 試験名_0001000.csv ／ 試験名_0002000.csv
+      </div>
+      <div class="actions">
+        <button id="previewButton" class="button green" type="button" disabled>🔄 プレビュー更新</button>
+        <div id="status" class="status">最初にフォルダーを選択してください。</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="preview-head">
+        <div>
+          <h2 class="section-title" style="margin-bottom:0"><span class="step">3</span>変更後の名前を確認・個別修正</h2>
+          <p>黄色の欄は直接編集できます。「.csv」を省略しても自動で追加されます。</p>
+        </div>
+        <div id="fileCount" class="count">対象：0ファイル</div>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="CSVファイル名変更プレビュー">
+          <thead>
+            <tr>
+              <th style="width:62px">No.</th>
+              <th>変更前のファイル名</th>
+              <th>変更後のファイル名（編集可能）</th>
+              <th>状態</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody">
+            <tr><td class="empty" colspan="4">プレビューはまだ作成されていません。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer-actions">
+        <button id="resetNamesButton" class="button secondary" type="button" disabled>自動作成名に戻す</button>
+        <button id="renameButton" class="button green large" type="button" disabled>✓ 名前を変更</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">使い方と注意点</h2>
+      <div class="help-grid">
+        <div class="help-card"><strong>① 別タブで開いて選ぶ</strong>埋め込み画面の場合は「別タブでソフトを開く」を押します。Windowsの選択画面で「PC」を開くと、Cドライブ・Dドライブ・外付けドライブを選べます。</div>
+        <div class="help-card"><strong>② プレビューを確認</strong>元のファイル名を自然な数字順で並べ、変更後の名前を一覧表示します。</div>
+        <div class="help-card"><strong>③ 必要な行だけ修正</strong>黄色い入力欄を直接編集してから「名前を変更」を押します。</div>
+      </div>
+      <div class="warning">
+        <strong>安全上の注意：</strong>ブラウザ版は、名前変更を「一時ファイルへコピー → 元ファイル削除 → 新しい名前で作成」の順で行います。処理中はページを閉じないでください。最初はコピーしたCSVで動作確認してください。履歴CSVは作成しません。
+      </div>
+    </section>
+  </main>
+
+  <dialog id="confirmDialog">
+    <div class="dialog-body">
+      <h2>ファイル名を変更しますか？</h2>
+      <p id="confirmText"></p>
+      <div class="dialog-actions">
+        <button id="cancelDialogButton" class="button secondary" type="button">キャンセル</button>
+        <button id="confirmRenameButton" class="button green" type="button">変更を実行</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="progressDialog">
+    <div class="dialog-body">
+      <h2>名前を変更しています</h2>
+      <p id="progressText">準備中です。</p>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+    </div>
+  </dialog>
+
+  <script>
+    'use strict';
+
+    const SETTINGS_KEY = 'csv-renamer-settings-v1';
+    const PICKER_ID = 'csv-renamer-main-folder';
+    const INVALID_WINDOWS_CHARS = /[<>:"/\\|?*\u0000-\u001F]/;
+    const RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+
+    const state = {
+      directoryHandle: null,
+      sourceFiles: [],
+      previewItems: [],
+      previewSignature: '',
+      previewReady: false,
+      busy: false
+    };
+
+    const elements = {
+      browserNotice: document.getElementById('browserNotice'),
+      embeddedNotice: document.getElementById('embeddedNotice'),
+      openStandaloneButton: document.getElementById('openStandaloneButton'),
+      folderName: document.getElementById('folderName'),
+      selectFolderButton: document.getElementById('selectFolderButton'),
+      commonName: document.getElementById('commonName'),
+      separator: document.getElementById('separator'),
+      startNumber: document.getElementById('startNumber'),
+      stepNumber: document.getElementById('stepNumber'),
+      digits: document.getElementById('digits'),
+      previewButton: document.getElementById('previewButton'),
+      status: document.getElementById('status'),
+      fileCount: document.getElementById('fileCount'),
+      previewBody: document.getElementById('previewBody'),
+      resetNamesButton: document.getElementById('resetNamesButton'),
+      renameButton: document.getElementById('renameButton'),
+      confirmDialog: document.getElementById('confirmDialog'),
+      confirmText: document.getElementById('confirmText'),
+      cancelDialogButton: document.getElementById('cancelDialogButton'),
+      confirmRenameButton: document.getElementById('confirmRenameButton'),
+      progressDialog: document.getElementById('progressDialog'),
+      progressText: document.getElementById('progressText'),
+      progressBar: document.getElementById('progressBar')
+    };
+
+    function loadSettings() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        if (typeof saved.commonName === 'string' && saved.commonName.trim()) elements.commonName.value = saved.commonName;
+        if (typeof saved.separator === 'string') elements.separator.value = saved.separator;
+        if (Number.isSafeInteger(saved.startNumber)) elements.startNumber.value = saved.startNumber;
+        if (Number.isSafeInteger(saved.stepNumber) && saved.stepNumber > 0) elements.stepNumber.value = saved.stepNumber;
+        if (Number.isSafeInteger(saved.digits) && saved.digits >= 1 && saved.digits <= 18) elements.digits.value = saved.digits;
+      } catch (_) {
+        // 保存内容が壊れている場合は初期値を使用します。
+      }
+    }
+
+    function saveSettings() {
+      const settings = {
+        commonName: elements.commonName.value.trim(),
+        separator: elements.separator.value,
+        startNumber: Number(elements.startNumber.value),
+        stepNumber: Number(elements.stepNumber.value),
+        digits: Number(elements.digits.value)
+      };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+
+    function setStatus(message, type = '') {
+      elements.status.textContent = message;
+      elements.status.className = `status ${type}`.trim();
+    }
+
+    function setProgress(message, completed, total) {
+      elements.progressText.textContent = message;
+      const percent = total > 0 ? Math.max(0, Math.min(100, Math.round((completed / total) * 100))) : 0;
+      elements.progressBar.style.width = `${percent}%`;
+    }
+
+    function getSettings() {
+      return {
+        commonName: elements.commonName.value.trim(),
+        separator: elements.separator.value,
+        startNumber: Number(elements.startNumber.value),
+        stepNumber: Number(elements.stepNumber.value),
+        digits: Number(elements.digits.value)
+      };
+    }
+
+    function currentSignature() {
+      const s = getSettings();
+      return JSON.stringify({ folder: state.directoryHandle?.name || '', ...s });
+    }
+
+    function invalidatePreview(message = '設定を変更しました。「プレビュー更新」を押してください。') {
+      if (state.busy) return;
+      state.previewReady = false;
+      state.previewSignature = '';
+      elements.renameButton.disabled = true;
+      elements.resetNamesButton.disabled = true;
+      if (state.directoryHandle) setStatus(message);
+    }
+
+    function naturalCompare(a, b) {
+      return a.localeCompare(b, 'ja', { numeric: true, sensitivity: 'base' });
+    }
+
+    function validateCommonSettings(settings) {
+      if (!settings.commonName) return '共通ファイル名を入力してください。';
+      if (INVALID_WINDOWS_CHARS.test(settings.commonName)) return '共通ファイル名に使用できない文字（\\ / : * ? " < > |）が含まれています。';
+      if (/[. ]$/.test(settings.commonName)) return '共通ファイル名の末尾に空白またはピリオドは使用できません。';
+      if (INVALID_WINDOWS_CHARS.test(settings.separator)) return '区切り文字に使用できない文字が含まれています。';
+      if (!Number.isSafeInteger(settings.startNumber)) return '開始値は整数で入力してください。';
+      if (!Number.isSafeInteger(settings.stepNumber) || settings.stepNumber < 1) return '増加値は1以上の整数で入力してください。';
+      if (!Number.isSafeInteger(settings.digits) || settings.digits < 1 || settings.digits > 18) return 'ゼロ埋め桁数は1～18の整数で入力してください。';
+      return '';
+    }
+
+    function normalizeTargetName(rawName) {
+      let name = String(rawName ?? '').trim();
+      if (!name) return { name: '', error: '名前が空です' };
+      if (!/\.csv$/i.test(name)) {
+        if (/\.[^./\\]+$/.test(name)) return { name, error: '拡張子は.csvのみ' };
+        name += '.csv';
+      }
+      if (INVALID_WINDOWS_CHARS.test(name)) return { name, error: '使用できない文字あり' };
+      if (/[. ]$/.test(name)) return { name, error: '末尾の空白・ピリオド不可' };
+      const base = name.slice(0, -4);
+      if (RESERVED_NAMES.test(base)) return { name, error: 'Windows予約名は使用不可' };
+      if (name.length > 240) return { name, error: 'ファイル名が長すぎます' };
+      return { name, error: '' };
+    }
+
+    async function ensurePermission(handle, readWrite = false) {
+      const options = readWrite ? { mode: 'readwrite' } : { mode: 'read' };
+      if ((await handle.queryPermission(options)) === 'granted') return true;
+      return (await handle.requestPermission(options)) === 'granted';
+    }
+
+    function isEmbeddedView() {
+      try {
+        return window.self !== window.top;
+      } catch (_) {
+        return true;
+      }
+    }
+
+    function createStandaloneUrl() {
+      const currentUrl = window.location.href || '';
+      if (currentUrl && !currentUrl.startsWith('about:srcdoc') && currentUrl !== 'about:blank') {
+        return { url: currentUrl, revoke: false };
+      }
+
+      const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      return {
+        url: URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })),
+        revoke: true
+      };
+    }
+
+    function openStandaloneView() {
+      const target = createStandaloneUrl();
+      const newWindow = window.open(target.url, '_blank');
+
+      if (!newWindow) {
+        if (target.revoke) URL.revokeObjectURL(target.url);
+        setStatus('別タブを開けませんでした。ブラウザのポップアップを許可して、もう一度押してください。', 'error');
+        return;
+      }
+
+      try { newWindow.opener = null; } catch (_) { }
+      if (target.revoke) setTimeout(() => URL.revokeObjectURL(target.url), 120000);
+      setStatus('別タブで開きました。新しいタブの「フォルダーを選ぶ」を押してください。', 'success');
+    }
+
+    async function selectFolder() {
+      if (isEmbeddedView()) {
+        elements.embeddedNotice.hidden = false;
+        setStatus('埋め込み画面ではフォルダーを選択できません。「別タブでソフトを開く」を押してください。', 'error');
+        return;
+      }
+
+      if (!('showDirectoryPicker' in window)) {
+        setStatus('このブラウザではフォルダーへの書き込み機能を利用できません。Windows版EdgeまたはChromeで開いてください。', 'error');
+        return;
+      }
+
+      try {
+        const handle = await window.showDirectoryPicker({
+          id: PICKER_ID,
+          mode: 'readwrite'
+        });
+        if (!(await ensurePermission(handle, true))) {
+          setStatus('フォルダーの読み書きが許可されませんでした。', 'error');
+          return;
+        }
+
+        state.directoryHandle = handle;
+        elements.folderName.textContent = `選択中：${handle.name}（Windowsの選択画面からDドライブ等も選択できます）`;
+        elements.previewButton.disabled = false;
+        clearPreview();
+        setStatus('フォルダーを選択しました。「プレビュー更新」を押してください。', 'success');
+      } catch (error) {
+        if (error?.name !== 'AbortError') {
+          const message = String(error?.message || error);
+          if (/cross.?origin|sub.?frame|file picker/i.test(message)) {
+            elements.embeddedNotice.hidden = false;
+            elements.selectFolderButton.disabled = true;
+            setStatus('埋め込み画面ではフォルダー選択が禁止されています。「別タブでソフトを開く」を押してください。', 'error');
+          } else {
+            setStatus(`フォルダーを選択できませんでした：${message}`, 'error');
+          }
+        }
+      }
+    }
+
+    async function readCsvFiles() {
+      const files = [];
+      for await (const [name, handle] of state.directoryHandle.entries()) {
+        if (handle.kind === 'file' && name.toLowerCase().endsWith('.csv')) {
+          files.push({ name, handle });
+        }
+      }
+      files.sort((a, b) => naturalCompare(a.name, b.name));
+      return files;
+    }
+
+    function clearPreview() {
+      state.sourceFiles = [];
+      state.previewItems = [];
+      state.previewReady = false;
+      state.previewSignature = '';
+      elements.previewBody.innerHTML = '<tr><td class="empty" colspan="4">プレビューはまだ作成されていません。</td></tr>';
+      elements.fileCount.textContent = '対象：0ファイル';
+      elements.renameButton.disabled = true;
+      elements.resetNamesButton.disabled = true;
+    }
+
+    function autoTargetName(index, settings) {
+      const value = BigInt(settings.startNumber) + (BigInt(index) * BigInt(settings.stepNumber));
+      const sign = value < 0n ? '-' : '';
+      const absolute = value < 0n ? -value : value;
+      const numberText = absolute.toString().padStart(settings.digits, '0');
+      return `${settings.commonName}${settings.separator}${sign}${numberText}.csv`;
+    }
+
+    async function buildPreview() {
+      if (!state.directoryHandle || state.busy) return;
+
+      const settings = getSettings();
+      const error = validateCommonSettings(settings);
+      if (error) {
+        setStatus(error, 'error');
+        return;
+      }
+
+      saveSettings();
+      setStatus('CSVファイルを読み込んでいます。', 'working');
+      elements.previewButton.disabled = true;
+
+      try {
+        if (!(await ensurePermission(state.directoryHandle, true))) {
+          throw new Error('フォルダーの読み書き権限がありません。');
+        }
+        const files = await readCsvFiles();
+        if (files.length === 0) {
+          clearPreview();
+          setStatus('選択したフォルダーにCSVファイルがありません。', 'error');
+          return;
+        }
+
+        state.sourceFiles = files;
+        state.previewItems = files.map((file, index) => {
+          const targetName = autoTargetName(index, settings);
+          return {
+            sourceName: file.name,
+            sourceHandle: file.handle,
+            autoTargetName: targetName,
+            targetName,
+            status: ''
+          };
+        });
+        state.previewSignature = currentSignature();
+        state.previewReady = true;
+        renderPreview();
+        setStatus('プレビューを作成しました。黄色の欄は個別に修正できます。', 'success');
+      } catch (error) {
+        clearPreview();
+        setStatus(`プレビューを作成できませんでした：${error.message || error}`, 'error');
+      } finally {
+        elements.previewButton.disabled = !state.directoryHandle;
+      }
+    }
+
+    function validatePreviewItems() {
+      const sourceNames = new Set(state.previewItems.map(item => item.sourceName.toLowerCase()));
+      const targetNames = new Set();
+      let hasError = false;
+
+      for (const item of state.previewItems) {
+        const normalized = normalizeTargetName(item.targetName);
+        item.targetName = normalized.name;
+        item.status = normalized.error;
+
+        if (!item.status) {
+          const key = item.targetName.toLowerCase();
+          if (targetNames.has(key)) {
+            item.status = '変更後の名前が重複';
+          } else {
+            targetNames.add(key);
+          }
+        }
+
+        if (!item.status && item.sourceName.toLowerCase() === item.targetName.toLowerCase()) {
+          item.status = '変更なし';
+        }
+        if (item.status && item.status !== '変更なし') hasError = true;
+      }
+
+      // フォルダー内にあるCSV以外の既存ファイル名との衝突も実行直前に再確認します。
+      return { hasError, sourceNames };
+    }
+
+    function renderPreview() {
+      const result = validatePreviewItems();
+      elements.previewBody.innerHTML = '';
+
+      state.previewItems.forEach((item, index) => {
+        const row = document.createElement('tr');
+
+        const numberCell = document.createElement('td');
+        numberCell.className = 'number';
+        numberCell.textContent = String(index + 1);
+
+        const sourceCell = document.createElement('td');
+        sourceCell.className = 'source';
+        sourceCell.textContent = item.sourceName;
+
+        const editCell = document.createElement('td');
+        editCell.className = 'edit-cell';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'name-editor';
+        input.value = item.targetName;
+        input.dataset.index = String(index);
+        input.setAttribute('aria-label', `${index + 1}行目の変更後ファイル名`);
+        input.addEventListener('input', onTargetNameEdited);
+        input.addEventListener('blur', onTargetNameBlurred);
+        editCell.appendChild(input);
+
+        const statusCell = document.createElement('td');
+        statusCell.className = 'status-cell';
+        if (!item.status) {
+          statusCell.textContent = '変更予定';
+          statusCell.classList.add('ok-text');
+        } else if (item.status === '変更なし') {
+          statusCell.textContent = item.status;
+          statusCell.classList.add('same-text');
+        } else {
+          statusCell.textContent = item.status;
+          statusCell.classList.add('error-text');
+        }
+
+        row.append(numberCell, sourceCell, editCell, statusCell);
+        elements.previewBody.appendChild(row);
+      });
+
+      elements.fileCount.textContent = `対象：${state.previewItems.length}ファイル`;
+      elements.resetNamesButton.disabled = state.previewItems.length === 0 || state.busy;
+      elements.renameButton.disabled = result.hasError || !state.previewReady || state.previewSignature !== currentSignature() || state.busy;
+
+      if (result.hasError) {
+        setStatus('エラーのある名前があります。黄色の欄を修正してください。', 'error');
+      }
+    }
+
+    function onTargetNameEdited(event) {
+      const index = Number(event.target.dataset.index);
+      state.previewItems[index].targetName = event.target.value;
+      const result = validatePreviewItems();
+      const row = event.target.closest('tr');
+      const statusCell = row.querySelector('.status-cell');
+      const item = state.previewItems[index];
+      statusCell.className = 'status-cell';
+      if (!item.status) {
+        statusCell.textContent = '変更予定';
+        statusCell.classList.add('ok-text');
+      } else if (item.status === '変更なし') {
+        statusCell.textContent = item.status;
+        statusCell.classList.add('same-text');
+      } else {
+        statusCell.textContent = item.status;
+        statusCell.classList.add('error-text');
+      }
+      elements.renameButton.disabled = result.hasError || !state.previewReady || state.previewSignature !== currentSignature();
+      setStatus(result.hasError ? 'エラーのある名前があります。修正してください。' : '個別修正を反映しました。', result.hasError ? 'error' : 'success');
+    }
+
+    function onTargetNameBlurred(event) {
+      const index = Number(event.target.dataset.index);
+      const normalized = normalizeTargetName(event.target.value);
+      state.previewItems[index].targetName = normalized.name;
+      renderPreview();
+    }
+
+    function resetAutoNames() {
+      const settings = getSettings();
+      state.previewItems.forEach((item, index) => {
+        item.autoTargetName = autoTargetName(index, settings);
+        item.targetName = item.autoTargetName;
+      });
+      renderPreview();
+      setStatus('すべて自動作成名に戻しました。', 'success');
+    }
+
+    async function listAllEntryNames() {
+      const names = new Set();
+      for await (const [name] of state.directoryHandle.entries()) names.add(name.toLowerCase());
+      return names;
+    }
+
+    async function validateBeforeRename() {
+      if (!state.previewReady || state.previewItems.length === 0) return '先にプレビューを作成してください。';
+      if (state.previewSignature !== currentSignature()) return '設定が変更されています。もう一度プレビュー更新を押してください。';
+
+      const validation = validatePreviewItems();
+      if (validation.hasError) return '変更後のファイル名にエラーがあります。';
+
+      if (!(await ensurePermission(state.directoryHandle, true))) return 'フォルダーの読み書きが許可されていません。';
+
+      const currentCsvFiles = await readCsvFiles();
+      const currentNames = currentCsvFiles.map(file => file.name);
+      const previewNames = state.previewItems.map(item => item.sourceName);
+      if (currentNames.length !== previewNames.length || currentNames.some((name, i) => name !== previewNames[i])) {
+        return 'フォルダー内のCSVがプレビュー作成後に変更されています。もう一度プレビュー更新を押してください。';
+      }
+
+      const allEntryNames = await listAllEntryNames();
+      const sourceSet = new Set(state.previewItems.map(item => item.sourceName.toLowerCase()));
+      for (const item of state.previewItems) {
+        const targetKey = item.targetName.toLowerCase();
+        if (allEntryNames.has(targetKey) && !sourceSet.has(targetKey)) {
+          return `同名のファイルがすでにあります：${item.targetName}`;
+        }
+      }
+      return '';
+    }
+
+    async function openConfirmation() {
+      if (state.busy) return;
+      try {
+        const error = await validateBeforeRename();
+        if (error) {
+          setStatus(error, 'error');
+          renderPreview();
+          return;
+        }
+        elements.confirmText.textContent = `${state.previewItems.length}個のCSVファイル名を変更します。処理中はページを閉じないでください。`;
+        elements.confirmDialog.showModal();
+      } catch (error) {
+        setStatus(`実行前の確認に失敗しました：${error.message || error}`, 'error');
+      }
+    }
+
+    async function copyFileToName(sourceFile, targetName) {
+      const targetHandle = await state.directoryHandle.getFileHandle(targetName, { create: true });
+      const writable = await targetHandle.createWritable();
+      try {
+        await writable.write(sourceFile);
+      } finally {
+        await writable.close();
+      }
+    }
+
+    function createTempName(index) {
+      const random = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      return `__CSV_RENAMER_TEMP_${random}_${index}.tmp`;
+    }
+
+    async function executeRename() {
+      elements.confirmDialog.close();
+      if (state.busy) return;
+
+      state.busy = true;
+      elements.selectFolderButton.disabled = true;
+      elements.previewButton.disabled = true;
+      elements.renameButton.disabled = true;
+      elements.resetNamesButton.disabled = true;
+      elements.progressDialog.showModal();
+      setProgress('処理前の確認をしています。', 0, 1);
+
+      const backups = [];
+      const createdTargets = [];
+      const deletedSources = [];
+      let commitComplete = false;
+
+      try {
+        const error = await validateBeforeRename();
+        if (error) throw new Error(error);
+
+        const count = state.previewItems.length;
+        const totalSteps = count * 4;
+        let completed = 0;
+
+        // 1. 全CSVを一時ファイルへコピーします。ここでは元ファイルを残します。
+        for (let index = 0; index < count; index++) {
+          const item = state.previewItems[index];
+          setProgress(`安全用の一時コピーを作成中（${index + 1}/${count}）`, completed, totalSteps);
+          const sourceHandle = await state.directoryHandle.getFileHandle(item.sourceName);
+          const sourceFile = await sourceHandle.getFile();
+          const tempName = createTempName(index);
+          await copyFileToName(sourceFile, tempName);
+          backups.push({ ...item, tempName });
+          completed++;
+        }
+
+        // 2. 一時コピーが全部できた後に、元ファイルを削除します。
+        for (let index = 0; index < count; index++) {
+          setProgress(`元の名前を整理中（${index + 1}/${count}）`, completed, totalSteps);
+          await state.directoryHandle.removeEntry(backups[index].sourceName);
+          deletedSources.push(backups[index].sourceName);
+          completed++;
+        }
+
+        // 3. 一時ファイルから新しい名前で作成します。
+        for (let index = 0; index < count; index++) {
+          const item = backups[index];
+          setProgress(`新しい名前で作成中（${index + 1}/${count}）`, completed, totalSteps);
+          const tempHandle = await state.directoryHandle.getFileHandle(item.tempName);
+          const tempFile = await tempHandle.getFile();
+          await copyFileToName(tempFile, item.targetName);
+          createdTargets.push(item.targetName);
+          completed++;
+        }
+        commitComplete = true;
+
+        // 4. 一時ファイルを削除します。名前変更自体はすでに完了しているため、
+        //    削除できない一時ファイルがあっても元ファイルへは戻しません。
+        const cleanupFailures = [];
+        for (let index = 0; index < count; index++) {
+          setProgress(`一時ファイルを削除中（${index + 1}/${count}）`, completed, totalSteps);
+          try {
+            await state.directoryHandle.removeEntry(backups[index].tempName);
+          } catch (_) {
+            cleanupFailures.push(backups[index].tempName);
+          }
+          completed++;
+        }
+
+        setProgress('完了しました。', totalSteps, totalSteps);
+        await new Promise(resolve => setTimeout(resolve, 350));
+        elements.progressDialog.close();
+        clearPreview();
+        const cleanupNote = cleanupFailures.length > 0
+          ? ` 一時ファイルが${cleanupFailures.length}個残ったため、フォルダー内の「__CSV_RENAMER_TEMP_」から始まるファイルを削除してください。`
+          : '';
+        setStatus(`${count}個のCSVファイル名を変更しました。履歴ファイルは作成していません。${cleanupNote}`, cleanupFailures.length > 0 ? 'working' : 'success');
+      } catch (error) {
+        let recoveryMessage = '';
+        try {
+          // 新しい名前の作成がすべて完了する前のエラーだけ、元の状態へ戻します。
+          if (!commitComplete && deletedSources.length > 0 && backups.length > 0) {
+            setProgress('エラーが発生したため、元の名前へ復元しています。', 0, deletedSources.length);
+            for (const targetName of createdTargets) {
+              try { await state.directoryHandle.removeEntry(targetName); } catch (_) { }
+            }
+            let restored = 0;
+            for (const backup of backups) {
+              if (!deletedSources.includes(backup.sourceName)) continue;
+              try {
+                const tempHandle = await state.directoryHandle.getFileHandle(backup.tempName);
+                const tempFile = await tempHandle.getFile();
+                await copyFileToName(tempFile, backup.sourceName);
+                restored++;
+              } catch (_) { }
+              setProgress('元の名前へ復元しています。', restored, deletedSources.length);
+            }
+            recoveryMessage = restored === deletedSources.length
+              ? '元のファイル名へ復元しました。'
+              : '一部を復元できない可能性があります。フォルダー内の一時ファイルを確認してください。';
+          }
+          if (!commitComplete) {
+            for (const backup of backups) {
+              try { await state.directoryHandle.removeEntry(backup.tempName); } catch (_) { }
+            }
+          }
+        } catch (_) {
+          recoveryMessage = '一時ファイルが残っている可能性があります。フォルダー内を確認してください。';
+        }
+
+        if (elements.progressDialog.open) elements.progressDialog.close();
+        setStatus(`名前変更中にエラーが発生しました：${error.message || error} ${recoveryMessage}`, 'error');
+      } finally {
+        state.busy = false;
+        elements.selectFolderButton.disabled = false;
+        elements.previewButton.disabled = !state.directoryHandle;
+        if (state.previewItems.length > 0) renderPreview();
+      }
+    }
+
+    function checkBrowserSupport() {
+      if (isEmbeddedView()) {
+        elements.embeddedNotice.hidden = false;
+        elements.selectFolderButton.disabled = true;
+        setStatus('この画面は埋め込み表示です。「別タブでソフトを開く」を押してください。', 'working');
+        return;
+      }
+
+      const supported = 'showDirectoryPicker' in window && window.isSecureContext;
+      if (!supported) {
+        elements.browserNotice.innerHTML = '<strong>この環境では直接の名前変更を利用できません。</strong><br>GitHub Pages（https://）で公開し、Windows版Microsoft EdgeまたはGoogle Chromeで開いてください。';
+        elements.browserNotice.style.borderColor = '#efb2ad';
+        elements.browserNotice.style.background = '#fff1f0';
+        elements.browserNotice.style.color = '#8f1f17';
+        elements.selectFolderButton.disabled = true;
+        setStatus('対応ブラウザで開いてください。', 'error');
+      }
+    }
+
+    elements.openStandaloneButton.addEventListener('click', openStandaloneView);
+    elements.selectFolderButton.addEventListener('click', selectFolder);
+    elements.previewButton.addEventListener('click', buildPreview);
+    elements.resetNamesButton.addEventListener('click', resetAutoNames);
+    elements.renameButton.addEventListener('click', openConfirmation);
+    elements.cancelDialogButton.addEventListener('click', () => elements.confirmDialog.close());
+    elements.confirmRenameButton.addEventListener('click', executeRename);
+
+    for (const input of [elements.commonName, elements.separator, elements.startNumber, elements.stepNumber, elements.digits]) {
+      input.addEventListener('input', () => {
+        saveSettings();
+        invalidatePreview();
+      });
+    }
+
+    loadSettings();
+    checkBrowserSupport();
+  </script>
+</body>
+</html>
