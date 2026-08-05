@@ -270,7 +270,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 790px;
+      min-width: 920px;
     }
 
     th, td {
@@ -292,9 +292,31 @@
     tbody tr:last-child td { border-bottom: 0; }
     tbody tr:nth-child(even) { background: #fafcff; }
     td.number { width: 62px; text-align: center; }
+    td.select-cell { width: 96px; text-align: center; }
     td.source { color: #3a4759; word-break: break-all; }
     td.edit-cell { min-width: 320px; background: var(--yellow); }
-    td.status-cell { width: 150px; font-weight: 800; }
+    td.status-cell { width: 170px; font-weight: 800; }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 0;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .target-checkbox, #selectAllCheckbox {
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      accent-color: var(--green);
+      cursor: pointer;
+    }
+
+    tr.excluded-row td { background: #f4f6f8 !important; color: #8a94a2; }
+    tr.excluded-row .name-editor { background: #eef1f4 !important; color: #8a94a2; }
 
     .name-editor {
       width: 100%;
@@ -469,8 +491,8 @@
     <section class="panel">
       <div class="preview-head">
         <div>
-          <h2 class="section-title" style="margin-bottom:0"><span class="step">3</span>変更後の名前を確認・個別修正</h2>
-          <p>黄色の欄は直接編集できます。「.csv」を省略しても自動で追加されます。</p>
+          <h2 class="section-title" style="margin-bottom:0"><span class="step">3</span>変更するファイルを選択・個別修正</h2>
+          <p>変更対象だけチェックします。初期状態は全件チェック済みです。チェックを外して「プレビュー更新」を押すと、対象外の行は一覧から消えます。</p>
         </div>
         <div id="fileCount" class="count">対象：0ファイル</div>
       </div>
@@ -480,20 +502,22 @@
           <thead>
             <tr>
               <th style="width:62px">No.</th>
+              <th style="width:96px"><label class="checkbox-label"><input id="selectAllCheckbox" type="checkbox" checked disabled>全選択</label></th>
               <th>変更前のファイル名</th>
               <th>変更後のファイル名（編集可能）</th>
               <th>状態</th>
             </tr>
           </thead>
           <tbody id="previewBody">
-            <tr><td class="empty" colspan="4">プレビューはまだ作成されていません。</td></tr>
+            <tr><td class="empty" colspan="5">プレビューはまだ作成されていません。</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="footer-actions">
+        <button id="restoreExcludedButton" class="button secondary" type="button" disabled>全CSVを再表示</button>
         <button id="resetNamesButton" class="button secondary" type="button" disabled>自動作成名に戻す</button>
-        <button id="renameButton" class="button green large" type="button" disabled>✓ 名前を変更</button>
+        <button id="renameButton" class="button green large" type="button" disabled>✓ チェックしたファイルだけ変更</button>
       </div>
     </section>
 
@@ -501,8 +525,8 @@
       <h2 class="section-title">使い方と注意点</h2>
       <div class="help-grid">
         <div class="help-card"><strong>① 別タブで開いて選ぶ</strong>埋め込み画面の場合は「別タブでソフトを開く」を押します。Windowsの選択画面で「PC」を開くと、Cドライブ・Dドライブ・外付けドライブを選べます。</div>
-        <div class="help-card"><strong>② プレビューを確認</strong>元のファイル名を自然な数字順で並べ、変更後の名前を一覧表示します。</div>
-        <div class="help-card"><strong>③ 必要な行だけ修正</strong>黄色い入力欄を直接編集してから「名前を変更」を押します。</div>
+        <div class="help-card"><strong>② 変更対象を選択</strong>最初は全件チェック済みです。変更しないファイルのチェックを外し、「プレビュー更新」で対象外を非表示にします。</div>
+        <div class="help-card"><strong>③ 名前を確認・修正</strong>黄色い入力欄を直接編集し、「チェックしたファイルだけ変更」を押します。</div>
       </div>
       <div class="warning">
         <strong>安全上の注意：</strong>ブラウザ版は、名前変更を「一時ファイルへコピー → 元ファイル削除 → 新しい名前で作成」の順で行います。処理中はページを閉じないでください。最初はコピーしたCSVで動作確認してください。履歴CSVは作成しません。
@@ -543,6 +567,8 @@
       previewItems: [],
       previewSignature: '',
       previewReady: false,
+      excludedSourceNames: new Set(),
+      totalCsvCount: 0,
       busy: false
     };
 
@@ -561,6 +587,8 @@
       status: document.getElementById('status'),
       fileCount: document.getElementById('fileCount'),
       previewBody: document.getElementById('previewBody'),
+      selectAllCheckbox: document.getElementById('selectAllCheckbox'),
+      restoreExcludedButton: document.getElementById('restoreExcludedButton'),
       resetNamesButton: document.getElementById('resetNamesButton'),
       renameButton: document.getElementById('renameButton'),
       confirmDialog: document.getElementById('confirmDialog'),
@@ -728,7 +756,7 @@
         state.directoryHandle = handle;
         elements.folderName.textContent = `選択中：${handle.name}（Windowsの選択画面からDドライブ等も選択できます）`;
         elements.previewButton.disabled = false;
-        clearPreview();
+        clearPreview(true);
         setStatus('フォルダーを選択しました。「プレビュー更新」を押してください。', 'success');
       } catch (error) {
         if (error?.name !== 'AbortError') {
@@ -755,15 +783,33 @@
       return files;
     }
 
-    function clearPreview() {
+    function clearPreview(clearExclusions = false) {
       state.sourceFiles = [];
       state.previewItems = [];
       state.previewReady = false;
       state.previewSignature = '';
-      elements.previewBody.innerHTML = '<tr><td class="empty" colspan="4">プレビューはまだ作成されていません。</td></tr>';
-      elements.fileCount.textContent = '対象：0ファイル';
+      state.totalCsvCount = 0;
+      if (clearExclusions) state.excludedSourceNames.clear();
+      elements.previewBody.innerHTML = '<tr><td class="empty" colspan="5">プレビューはまだ作成されていません。</td></tr>';
+      elements.fileCount.textContent = '変更対象：0 / 0ファイル';
+      elements.selectAllCheckbox.checked = true;
+      elements.selectAllCheckbox.indeterminate = false;
+      elements.selectAllCheckbox.disabled = true;
       elements.renameButton.disabled = true;
       elements.resetNamesButton.disabled = true;
+      elements.restoreExcludedButton.disabled = state.excludedSourceNames.size === 0;
+    }
+
+    function syncExcludedNamesFromVisibleRows() {
+      for (const item of state.previewItems) {
+        const key = item.sourceName.toLowerCase();
+        if (item.selected) state.excludedSourceNames.delete(key);
+        else state.excludedSourceNames.add(key);
+      }
+    }
+
+    function getSelectedItems() {
+      return state.previewItems.filter(item => item.selected);
     }
 
     function autoTargetName(index, settings) {
@@ -785,6 +831,7 @@
       }
 
       saveSettings();
+      syncExcludedNamesFromVisibleRows();
       setStatus('CSVファイルを読み込んでいます。', 'working');
       elements.previewButton.disabled = true;
 
@@ -792,14 +839,33 @@
         if (!(await ensurePermission(state.directoryHandle, true))) {
           throw new Error('フォルダーの読み書き権限がありません。');
         }
-        const files = await readCsvFiles();
-        if (files.length === 0) {
-          clearPreview();
+        const allFiles = await readCsvFiles();
+        state.totalCsvCount = allFiles.length;
+        if (allFiles.length === 0) {
+          clearPreview(true);
           setStatus('選択したフォルダーにCSVファイルがありません。', 'error');
           return;
         }
 
+        const files = allFiles.filter(file => !state.excludedSourceNames.has(file.name.toLowerCase()));
         state.sourceFiles = files;
+
+        if (files.length === 0) {
+          state.previewItems = [];
+          state.previewReady = false;
+          state.previewSignature = '';
+          elements.previewBody.innerHTML = '<tr><td class="empty" colspan="5">変更対象のCSVがありません。「全CSVを再表示」で元に戻せます。</td></tr>';
+          elements.fileCount.textContent = `変更対象：0 / ${allFiles.length}ファイル`;
+          elements.selectAllCheckbox.checked = false;
+          elements.selectAllCheckbox.indeterminate = false;
+          elements.selectAllCheckbox.disabled = true;
+          elements.renameButton.disabled = true;
+          elements.resetNamesButton.disabled = true;
+          elements.restoreExcludedButton.disabled = false;
+          setStatus('すべてのチェックが外れています。変更するファイルを再表示してください。', 'working');
+          return;
+        }
+
         state.previewItems = files.map((file, index) => {
           const targetName = autoTargetName(index, settings);
           return {
@@ -807,13 +873,17 @@
             sourceHandle: file.handle,
             autoTargetName: targetName,
             targetName,
+            selected: true,
             status: ''
           };
         });
         state.previewSignature = currentSignature();
         state.previewReady = true;
         renderPreview();
-        setStatus('プレビューを作成しました。黄色の欄は個別に修正できます。', 'success');
+        const hiddenCount = allFiles.length - files.length;
+        setStatus(hiddenCount > 0
+          ? `${hiddenCount}個を対象外にし、変更する${files.length}個だけを表示しました。`
+          : 'プレビューを作成しました。変更しないファイルはチェックを外せます。', 'success');
       } catch (error) {
         clearPreview();
         setStatus(`プレビューを作成できませんでした：${error.message || error}`, 'error');
@@ -823,11 +893,17 @@
     }
 
     function validatePreviewItems() {
-      const sourceNames = new Set(state.previewItems.map(item => item.sourceName.toLowerCase()));
+      const selectedItems = getSelectedItems();
+      const sourceNames = new Set(selectedItems.map(item => item.sourceName.toLowerCase()));
       const targetNames = new Set();
       let hasError = false;
 
       for (const item of state.previewItems) {
+        if (!item.selected) {
+          item.status = '対象外（更新で非表示）';
+          continue;
+        }
+
         const normalized = normalizeTargetName(item.targetName);
         item.targetName = normalized.name;
         item.status = normalized.error;
@@ -847,8 +923,7 @@
         if (item.status && item.status !== '変更なし') hasError = true;
       }
 
-      // フォルダー内にあるCSV以外の既存ファイル名との衝突も実行直前に再確認します。
-      return { hasError, sourceNames };
+      return { hasError, sourceNames, selectedCount: selectedItems.length };
     }
 
     function renderPreview() {
@@ -857,10 +932,22 @@
 
       state.previewItems.forEach((item, index) => {
         const row = document.createElement('tr');
+        if (!item.selected) row.classList.add('excluded-row');
 
         const numberCell = document.createElement('td');
         numberCell.className = 'number';
         numberCell.textContent = String(index + 1);
+
+        const selectCell = document.createElement('td');
+        selectCell.className = 'select-cell';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'target-checkbox';
+        checkbox.checked = item.selected;
+        checkbox.dataset.index = String(index);
+        checkbox.setAttribute('aria-label', `${item.sourceName}を変更対象にする`);
+        checkbox.addEventListener('change', onTargetSelectionChanged);
+        selectCell.appendChild(checkbox);
 
         const sourceCell = document.createElement('td');
         sourceCell.className = 'source';
@@ -872,6 +959,7 @@
         input.type = 'text';
         input.className = 'name-editor';
         input.value = item.targetName;
+        input.disabled = !item.selected;
         input.dataset.index = String(index);
         input.setAttribute('aria-label', `${index + 1}行目の変更後ファイル名`);
         input.addEventListener('input', onTargetNameEdited);
@@ -880,7 +968,10 @@
 
         const statusCell = document.createElement('td');
         statusCell.className = 'status-cell';
-        if (!item.status) {
+        if (!item.selected) {
+          statusCell.textContent = item.status;
+          statusCell.classList.add('same-text');
+        } else if (!item.status) {
           statusCell.textContent = '変更予定';
           statusCell.classList.add('ok-text');
         } else if (item.status === '変更なし') {
@@ -891,17 +982,53 @@
           statusCell.classList.add('error-text');
         }
 
-        row.append(numberCell, sourceCell, editCell, statusCell);
+        row.append(numberCell, selectCell, sourceCell, editCell, statusCell);
         elements.previewBody.appendChild(row);
       });
 
-      elements.fileCount.textContent = `対象：${state.previewItems.length}ファイル`;
-      elements.resetNamesButton.disabled = state.previewItems.length === 0 || state.busy;
-      elements.renameButton.disabled = result.hasError || !state.previewReady || state.previewSignature !== currentSignature() || state.busy;
+      const totalVisible = state.previewItems.length;
+      const selectedCount = result.selectedCount;
+      const folderTotal = state.totalCsvCount || totalVisible;
+      elements.fileCount.textContent = `変更対象：${selectedCount} / フォルダー内${folderTotal}ファイル`;
+      elements.selectAllCheckbox.disabled = totalVisible === 0 || state.busy;
+      elements.selectAllCheckbox.checked = totalVisible > 0 && selectedCount === totalVisible;
+      elements.selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalVisible;
+      elements.restoreExcludedButton.disabled = state.excludedSourceNames.size === 0 || state.busy;
+      elements.resetNamesButton.disabled = selectedCount === 0 || state.busy;
+      elements.renameButton.disabled = result.hasError || selectedCount === 0 || !state.previewReady || state.previewSignature !== currentSignature() || state.busy;
 
       if (result.hasError) {
-        setStatus('エラーのある名前があります。黄色の欄を修正してください。', 'error');
+        setStatus('変更対象の中にエラーのある名前があります。黄色の欄を修正してください。', 'error');
       }
+    }
+
+    function onTargetSelectionChanged(event) {
+      const index = Number(event.target.dataset.index);
+      const item = state.previewItems[index];
+      item.selected = event.target.checked;
+      const key = item.sourceName.toLowerCase();
+      if (item.selected) state.excludedSourceNames.delete(key);
+      else state.excludedSourceNames.add(key);
+      renderPreview();
+      const selectedCount = getSelectedItems().length;
+      setStatus(item.selected
+        ? `${item.sourceName}を変更対象に戻しました。`
+        : `${item.sourceName}を対象外にしました。「プレビュー更新」で一覧から非表示になります。`, 'success');
+      if (selectedCount === 0) setStatus('変更対象がありません。変更するファイルにチェックを入れてください。', 'working');
+    }
+
+    function toggleAllVisible(event) {
+      const checked = event.target.checked;
+      for (const item of state.previewItems) {
+        item.selected = checked;
+        const key = item.sourceName.toLowerCase();
+        if (checked) state.excludedSourceNames.delete(key);
+        else state.excludedSourceNames.add(key);
+      }
+      renderPreview();
+      setStatus(checked
+        ? '表示中のCSVをすべて変更対象にしました。'
+        : '表示中のCSVをすべて対象外にしました。「プレビュー更新」で一覧から非表示になります。', checked ? 'success' : 'working');
     }
 
     function onTargetNameEdited(event) {
@@ -922,7 +1049,7 @@
         statusCell.textContent = item.status;
         statusCell.classList.add('error-text');
       }
-      elements.renameButton.disabled = result.hasError || !state.previewReady || state.previewSignature !== currentSignature();
+      elements.renameButton.disabled = result.hasError || result.selectedCount === 0 || !state.previewReady || state.previewSignature !== currentSignature() || state.busy;
       setStatus(result.hasError ? 'エラーのある名前があります。修正してください。' : '個別修正を反映しました。', result.hasError ? 'error' : 'success');
     }
 
@@ -935,12 +1062,25 @@
 
     function resetAutoNames() {
       const settings = getSettings();
-      state.previewItems.forEach((item, index) => {
-        item.autoTargetName = autoTargetName(index, settings);
+      let selectedIndex = 0;
+      state.previewItems.forEach(item => {
+        if (!item.selected) return;
+        item.autoTargetName = autoTargetName(selectedIndex, settings);
         item.targetName = item.autoTargetName;
+        selectedIndex++;
       });
       renderPreview();
-      setStatus('すべて自動作成名に戻しました。', 'success');
+      setStatus('変更対象のファイルを自動作成名に戻しました。', 'success');
+    }
+
+    async function restoreAllCsvFiles() {
+      if (!state.directoryHandle || state.busy) return;
+      state.excludedSourceNames.clear();
+      state.previewItems = [];
+      await buildPreview();
+      if (state.previewItems.length > 0) {
+        setStatus('フォルダー内のCSVをすべて再表示しました。', 'success');
+      }
     }
 
     async function listAllEntryNames() {
@@ -950,7 +1090,8 @@
     }
 
     async function validateBeforeRename() {
-      if (!state.previewReady || state.previewItems.length === 0) return '先にプレビューを作成してください。';
+      const selectedItems = getSelectedItems();
+      if (!state.previewReady || selectedItems.length === 0) return '変更するファイルにチェックを入れ、プレビューを作成してください。';
       if (state.previewSignature !== currentSignature()) return '設定が変更されています。もう一度プレビュー更新を押してください。';
 
       const validation = validatePreviewItems();
@@ -959,15 +1100,16 @@
       if (!(await ensurePermission(state.directoryHandle, true))) return 'フォルダーの読み書きが許可されていません。';
 
       const currentCsvFiles = await readCsvFiles();
-      const currentNames = currentCsvFiles.map(file => file.name);
-      const previewNames = state.previewItems.map(item => item.sourceName);
-      if (currentNames.length !== previewNames.length || currentNames.some((name, i) => name !== previewNames[i])) {
-        return 'フォルダー内のCSVがプレビュー作成後に変更されています。もう一度プレビュー更新を押してください。';
+      const currentNameSet = new Set(currentCsvFiles.map(file => file.name.toLowerCase()));
+      for (const item of selectedItems) {
+        if (!currentNameSet.has(item.sourceName.toLowerCase())) {
+          return `プレビュー作成後にファイルが見つからなくなりました：${item.sourceName}`;
+        }
       }
 
       const allEntryNames = await listAllEntryNames();
-      const sourceSet = new Set(state.previewItems.map(item => item.sourceName.toLowerCase()));
-      for (const item of state.previewItems) {
+      const sourceSet = new Set(selectedItems.map(item => item.sourceName.toLowerCase()));
+      for (const item of selectedItems) {
         const targetKey = item.targetName.toLowerCase();
         if (allEntryNames.has(targetKey) && !sourceSet.has(targetKey)) {
           return `同名のファイルがすでにあります：${item.targetName}`;
@@ -985,7 +1127,8 @@
           renderPreview();
           return;
         }
-        elements.confirmText.textContent = `${state.previewItems.length}個のCSVファイル名を変更します。処理中はページを閉じないでください。`;
+        const selectedCount = getSelectedItems().length;
+        elements.confirmText.textContent = `チェックした${selectedCount}個のCSVファイル名を変更します。チェックを外したファイルは変更しません。`;
         elements.confirmDialog.showModal();
       } catch (error) {
         setStatus(`実行前の確認に失敗しました：${error.message || error}`, 'error');
@@ -1016,6 +1159,8 @@
       elements.previewButton.disabled = true;
       elements.renameButton.disabled = true;
       elements.resetNamesButton.disabled = true;
+      elements.restoreExcludedButton.disabled = true;
+      elements.selectAllCheckbox.disabled = true;
       elements.progressDialog.showModal();
       setProgress('処理前の確認をしています。', 0, 1);
 
@@ -1028,13 +1173,14 @@
         const error = await validateBeforeRename();
         if (error) throw new Error(error);
 
-        const count = state.previewItems.length;
+        const itemsToRename = getSelectedItems().map(item => ({ ...item }));
+        const count = itemsToRename.length;
         const totalSteps = count * 4;
         let completed = 0;
 
         // 1. 全CSVを一時ファイルへコピーします。ここでは元ファイルを残します。
         for (let index = 0; index < count; index++) {
-          const item = state.previewItems[index];
+          const item = itemsToRename[index];
           setProgress(`安全用の一時コピーを作成中（${index + 1}/${count}）`, completed, totalSteps);
           const sourceHandle = await state.directoryHandle.getFileHandle(item.sourceName);
           const sourceFile = await sourceHandle.getFile();
@@ -1080,11 +1226,11 @@
         setProgress('完了しました。', totalSteps, totalSteps);
         await new Promise(resolve => setTimeout(resolve, 350));
         elements.progressDialog.close();
-        clearPreview();
+        clearPreview(true);
         const cleanupNote = cleanupFailures.length > 0
           ? ` 一時ファイルが${cleanupFailures.length}個残ったため、フォルダー内の「__CSV_RENAMER_TEMP_」から始まるファイルを削除してください。`
           : '';
-        setStatus(`${count}個のCSVファイル名を変更しました。履歴ファイルは作成していません。${cleanupNote}`, cleanupFailures.length > 0 ? 'working' : 'success');
+        setStatus(`チェックした${count}個のCSVファイル名を変更しました。チェックを外したファイルはそのままです。${cleanupNote}`, cleanupFailures.length > 0 ? 'working' : 'success');
       } catch (error) {
         let recoveryMessage = '';
         try {
@@ -1150,6 +1296,8 @@
     elements.openStandaloneButton.addEventListener('click', openStandaloneView);
     elements.selectFolderButton.addEventListener('click', selectFolder);
     elements.previewButton.addEventListener('click', buildPreview);
+    elements.selectAllCheckbox.addEventListener('change', toggleAllVisible);
+    elements.restoreExcludedButton.addEventListener('click', restoreAllCsvFiles);
     elements.resetNamesButton.addEventListener('click', resetAutoNames);
     elements.renameButton.addEventListener('click', openConfirmation);
     elements.cancelDialogButton.addEventListener('click', () => elements.confirmDialog.close());
